@@ -1,24 +1,127 @@
 # Restaurant Ordering System - Back-End
 
-Projeto desenvolvido de forma incremental para a disciplina de Back-End Development.
+Projeto da disciplina de Back-End Development.
 
-## Tecnologias
+A proposta é construir aos poucos um sistema de autoatendimento para restaurante. Nesta etapa estou trabalhando somente com o catálogo: categorias e produtos. A parte de pedidos, cozinha e outras funcionalidades fica para as próximas etapas do curso.
 
-- Node.js
-- TypeScript
-- Express
-- PostgreSQL
-- Git/GitHub
-- Postman
+## O que já foi feito
 
-## Recursos atuais
+- projeto Node.js com TypeScript;
+- servidor com Express;
+- conexão com PostgreSQL;
+- tabela de categorias;
+- tabela de produtos;
+- relacionamento de produto com categoria;
+- listagem e cadastro de categorias;
+- listagem e cadastro de produtos;
+- validações básicas dos dados recebidos;
+- testes das rotas usando Postman.
 
-### Categories
+## Estrutura
 
-- `GET /categories`
-- `POST /categories`
+```text
+restaurant-ordering-system-backend/
+├── database/
+│   ├── schema.sql
+│   └── seed.sql
+├── postman/
+│   └── Restaurant Ordering System API.postman_collection.json
+├── src/
+│   ├── controllers/
+│   │   ├── CategoryController.ts
+│   │   └── ProductController.ts
+│   ├── database/
+│   │   └── connection.ts
+│   ├── models/
+│   │   ├── Category.ts
+│   │   └── Product.ts
+│   ├── routes/
+│   │   ├── categoryRoutes.ts
+│   │   └── productRoutes.ts
+│   ├── app.ts
+│   └── server.ts
+├── .env.example
+├── .gitignore
+├── package.json
+└── tsconfig.json
+```
 
-Exemplo de criação:
+## Relação atual do banco
+
+Uma categoria pode ter vários produtos, mas cada produto pertence a uma categoria.
+
+```text
+categories
+    1
+    |
+    |---- N
+           products
+```
+
+O campo `products.category_id` aponta para `categories.id`.
+
+## Banco de dados
+
+O PostgreSQL é usado para armazenar os dados.
+
+Primeiro execute:
+
+```text
+database/schema.sql
+```
+
+Se quiser colocar alguns dados de teste, execute depois:
+
+```text
+database/seed.sql
+```
+
+O `seed.sql` cria algumas categorias e produtos simples para facilitar os testes.
+
+## Configuração do projeto
+
+Instale as dependências:
+
+```bash
+npm install
+```
+
+Crie um arquivo `.env` baseado no `.env.example`:
+
+```env
+PORT=3000
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/restaurant_ordering
+```
+
+Depois execute:
+
+```bash
+npm run dev
+```
+
+A API ficará disponível em:
+
+```text
+http://localhost:3000
+```
+
+## Rotas desenvolvidas até agora
+
+### Categorias
+
+Listar categorias:
+
+```http
+GET /categories
+```
+
+Criar categoria:
+
+```http
+POST /categories
+```
+
+Exemplo:
 
 ```json
 {
@@ -29,44 +132,53 @@ Exemplo de criação:
 }
 ```
 
-### Products
+### Produtos
 
-- `GET /products`
-- `POST /products`
+Listar produtos:
 
-Exemplo de criação:
+```http
+GET /products
+```
+
+A listagem também mostra o nome da categoria do produto, usando o relacionamento entre as duas tabelas.
+
+Criar produto:
+
+```http
+POST /products
+```
+
+Exemplo:
 
 ```json
 {
-  "category_id": "UUID-DA-CATEGORIA",
-  "title": "Pizza Calabresa",
-  "description": "Pizza de calabresa com cebola",
-  "price": 49.90,
-  "image": "calabresa.jpg",
+  "category_id": "11111111-1111-4111-8111-111111111111",
+  "title": "Pizza Margherita",
+  "description": "Mussarela, tomate e manjericão",
+  "price": 45.90,
+  "image": null,
   "available": true
 }
 ```
 
-## Banco de dados
+O produto só é cadastrado se a categoria informada existir e estiver ativa.
 
-O script de criação das tabelas está em `database/schema.sql`.
+## Postman
 
-Crie um banco PostgreSQL e execute esse arquivo antes de iniciar a API.
+A Collection está na pasta `postman`.
 
-## Configuração
+Ela possui as quatro requisições trabalhadas nesta etapa:
 
-1. Instale as dependências:
+```text
+Categories
+├── GET - List Categories
+└── POST - Create Category
 
-```bash
-npm install
+Products
+├── GET - List Products
+└── POST - Create Product
 ```
 
-2. Copie `.env.example` para `.env` e ajuste a conexão do PostgreSQL.
+## Observação
 
-3. Execute em desenvolvimento:
-
-```bash
-npm run dev
-```
-
-A API será iniciada em `http://localhost:3000` por padrão.
+Por enquanto mantive o projeto simples de propósito. A ideia é ir evoluindo a mesma aplicação conforme novos conteúdos forem vistos nas aulas, sem tentar colocar todas as partes do sistema de uma vez.
