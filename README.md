@@ -74,6 +74,19 @@ npm run dev
 
 Se o `.env` já existir, o assistente o preservará. Para configuração manual, copie `.env.example` para `.env`, substitua `DATABASE_URL` e gere `ADMIN_API_KEY` de forma segura. O script `doctor` apenas lê o banco, não modifica dados. O `GET /health` verifica em tempo real se a API consegue consultar o PostgreSQL.
 
+
+## Demonstração hospedada na nuvem (Supabase Edge Function)
+
+**[Abrir o cardápio funcionando](https://uxrixrkhrvzgitsjfgml.supabase.co/functions/v1/restaurant-catalog)**
+
+Esta é uma **demonstração online alternativa**, hospedada como função Deno no Supabase e conectada às mesmas tabelas PostgreSQL. O código exigido na disciplina continua no Express/TypeScript, em `src/`, e a execução local dele permanece separada.
+
+A página permite consultar categorias e produtos sem instalação local. A opção **Administração do catálogo** oferece cadastro, alteração de preço e exclusão mediante chave administrativa, gerada em particular na implantação, **não incluída no repositório**.
+
+API online: `/functions/v1/restaurant-catalog/api/categories`, `/functions/v1/restaurant-catalog/api/products` e `/functions/v1/restaurant-catalog/api/health`. A API hospedada aceita GET público e exige o cabeçalho `x-admin-key` válido para POST/PUT/DELETE. No banco, `public.catalog_admin_config` guarda **somente o hash SHA-256** da chave. As tabelas de catálogo permanecem com RLS bloqueando acesso direto por chaves públicas.
+
+> Atenção: o código da função hospedada não substitui o back-end Express da disciplina. É uma vitrine funcional do mesmo catálogo e banco de dados. Os recursos gratuitos da plataforma estão sujeitos a limites de uso.
+
 ## Instalação
 
 1. Clone o repositório, instale Node.js 20+ e execute `npm install`.
