@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Restaurant Ordering System | Cardápio</title>
+<meta name="description" content="Demonstração do catálogo de restaurantes conectada ao Supabase">
+<style>
+:root{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:#e8f6ed;background:#09130f}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 80% 0%,#254835 0,transparent 35%),#09130f}
+main{width:min(1050px,calc(100% - 36px));margin:0 auto;padding:46px 0 70px}
+h1{font-size:clamp(30px,5vw,55px);margin:12px 0 10px;letter-spacing:-.04em}h2{font-size:23px;margin:0 0 20px}
+.tag{font-size:12px;font-weight:800;letter-spacing:.15em;color:#8ee0a8;text-transform:uppercase}
+p{color:#b9cec2;line-height:1.5}.hero{padding:40px 0 22px}.hero p{max-width:650px}
+.panel{border:1px solid #345745;background:#112019d9;border-radius:17px;padding:22px;margin-top:24px}
+.chips{display:flex;flex-wrap:wrap;gap:9px}.chip{border:1px solid #3a6250;border-radius:99px;background:#1a3124;color:#d2f7dc;padding:9px 16px;cursor:pointer}
+.chip[aria-pressed=true]{background:#a3eabe;color:#092417;border-color:#a3eabe}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(245px,1fr));gap:16px}
+.card{border:1px solid #345745;background:linear-gradient(145deg,#1c3728,#12231b);border-radius:15px;padding:20px;min-height:176px;display:flex;flex-direction:column}
+.card small{color:#9edfb5}.card h3{font-size:22px;margin:13px 0 6px}.card p{margin:0 0 20px;flex:1}.price{font-weight:850;font-size:22px;color:#c3f5d5}
+button{font:inherit;cursor:pointer}button.primary{background:#a3eabe;color:#092417;border:0;border-radius:10px;padding:12px 18px;font-weight:700}
+label{display:block;font-weight:650;color:#cde8d5;font-size:14px;margin:12px 0 6px}
+input,select{background:#0d1b14;color:#fff;border:1px solid #436e56;padding:12px;border-radius:10px;width:100%;font:inherit}
+input:focus,select:focus,button:focus-visible{outline:2px solid #a3eabe;outline-offset:2px}
+.flex{display:flex;gap:16px;flex-wrap:wrap}.flex>div{flex:1;min-width:190px}
+.muted{color:#8dad9a}summary{cursor:pointer;font-weight:700;font-size:18px}
+hr{border:0;border-top:1px solid #345745;margin:25px 0}
+.toast{color:#d5f9e0;border-radius:10px;padding:12px;display:none;background:#23432e;margin:14px 0}
+footer{margin-top:40px;color:#82a08f;font-size:13px}
+footer a{color:#a3eabe}.danger{border:1px solid #975251;background:#382122;color:#ffd2c9;border-radius:8px;padding:6px 9px;font-size:12px;align-self:flex-end}
+.warn{color:#ffdfb0}
+</style>
+</head>
+<body>
+<main>
+<section class="hero"><span class="tag">Projeto de Desenvolvimento Back-End · Demonstração online</span>
+<h1>Restaurant Ordering System</h1>
+<p>Cardápio demonstrativo conectado ao PostgreSQL no Supabase em São Paulo. Consulte as categorias e os produtos cadastrados. A administração exige uma chave privada.</p>
+<div id="health" class="tag" role="status">Consultando banco de dados...</div></section>
+<section class="panel"><h2>Categorias</h2><div id="categories" class="chips"></div></section>
+<section class="panel"><h2>Cardápio</h2><div id="products" class="grid"></div></section>
+<section class="panel"><details><summary>Administração do catálogo</summary>
+<p>Cadastre, altere e exclua itens usando sua chave administrativa. Não compartilhe essa chave.</p>
+<label for="admin-key">Chave administrativa</label><input id="admin-key" type="password" placeholder="Chave privada" autocomplete="off">
+<div id="message" class="toast" role="status"></div>
+<hr><h2>Nova categoria</h2><form id="category-form">
+<div class="flex"><div><label for="cat-name">Nome</label><input id="cat-name" required maxlength="100"></div>
+<div><label for="cat-order">Ordem</label><input id="cat-order" type="number" min="0" step="1" value="10" required></div></div>
+<label for="cat-description">Descrição</label><input id="cat-description" maxlength="255">
+<button class="primary" type="submit" style="margin-top:16px">Cadastrar categoria</button>
+</form>
+<hr><h2>Novo produto</h2><form id="product-form">
+<div class="flex"><div><label for="prod-title">Nome do produto</label><input id="prod-title" required maxlength="150"></div>
+<div><label for="prod-price">Preço (R$)</label><input id="prod-price" type="number" min="0" max="99999999.99" step=".01" required></div></div>
+<label for="prod-category">Categoria</label><select id="prod-category" required></select>
+<label for="prod-description">Descrição</label><input id="prod-description" maxlength="500">
+<button class="primary" type="submit" style="margin-top:16px">Cadastrar produto</button>
+</form>
+<p class="muted">Para alterar o preço ou excluir um produto, use os botões no respectivo cartão após informar a chave.</p>
+</details></section>
+<footer>Projeto de aula · <a href="https://github.com/hhenriquehhenneberg-crypto/restaurant-ordering-system-backend" target="_blank" rel="noopener">Código Express/TypeScript no GitHub</a> · Demonstração hospedada em Supabase Edge Functions.</footer>
+</main>
+<script>
+(function(){
+  "use strict";
+  var base="https://uxrixrkhrvzgitsjfgml.supabase.co/functions/v1/restaurant-catalog";
+  var categories=[],products=[],filter="";
+  var $=function(id){return document.getElementById(id)};
+  function item(tag,text,cls){var el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el;}
+  function show(message,isError){var el=$("message");el.style.display="block";el.style.background=isError?"#63302b":"#23432e";el.textContent=message;}
+  function money(v){return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(v));}
+  async function api(path,opts){
+    var res=await fetch(base+"/api"+path,opts||{});
+    var out=res.status===204?{}:await res.json().catch(function(){return {};});
+    if(!res.ok)throw new Error(out.message||"Erro "+res.status);
+    return out;
+  }
+  function getKey(){var key=$("admin-key").value.trim();if(!key)throw new Error("Informe sua chave administrativa primeiro.");return key;}
+  function authHeaders(){return {"Content-Type":"application/json","x-admin-key":getKey()};}
+  async function write(path,method,body){
+    return api(path,{method:method,headers:authHeaders(),body:body===undefined?undefined:JSON.stringify(body)});
+  }
+  function render(){
+    var chips=$("categories");chips.replaceChildren();
+    [{id:"",name:"Todas"}].concat(categories).forEach(function(cat){
+      var b=item("button",cat.name,"chip");b.type="button";b.setAttribute("aria-pressed",String(filter===cat.id));
+      b.onclick=function(){filter=cat.id;render();};chips.appendChild(b);
+    });
+    var grid=$("products");grid.replaceChildren();
+    var visible=products.filter(function(p){return !filter||p.category_id===filter});
+    if(!visible.length){grid.appendChild(item("p","Não há produtos nesta categoria.","muted"));}
+    visible.forEach(function(p){
+      var card=item("article",undefined,"card");
+      card.appendChild(item("small",p.category_name));
+      card.appendChild(item("h3",p.title));
+      card.appendChild(item("p",p.description||"Produto do cardápio."));
+      card.appendChild(item("span",money(p.price),"price"));
+      if(!p.available)card.appendChild(item("small"," · Temporariamente indisponível","warn"));
+      var edit=item("button","Editar preço","danger");edit.style.marginTop="14px";
+      edit.onclick=async function(){
+        try{getKey();var raw=prompt("Novo preço em R$ para "+p.title+":",String(p.price));
+          if(raw===null)return;var val=Number(raw.replace(",","."));
+          if(!Number.isFinite(val)||val<0)throw new Error("Preço inválido.");
+          await write("/products/"+p.id,"PUT",{price:val});show("Produto atualizado.");await load();
+        }catch(e){show(e.message,true);}
+      };
+      var del=item("button","Excluir","danger");del.style.marginTop="8px";
+      del.onclick=async function(){
+        try{getKey();if(!confirm("Excluir o produto "+p.title+"?"))return;
+          await write("/products/"+p.id,"DELETE");show("Produto excluído.");await load();
+        }catch(e){show(e.message,true);}
+      };
+      card.appendChild(edit);card.appendChild(del);grid.appendChild(card);
+    });
+    var select=$("prod-category"),chosen=select.value;select.replaceChildren();
+    categories.forEach(function(c){var opt=item("option",c.name);opt.value=c.id;select.appendChild(opt)});
+    if(categories.some(function(c){return c.id===chosen}))select.value=chosen;
+  }
+  async function load(){
+    try{
+      var data=await Promise.all([api("/categories"),api("/products"),api("/health")]);
+      categories=data[0];products=data[1];$("health").textContent=data[2].status==="ok"?"● Banco conectado · Cardápio disponível":"Banco indisponível";
+      render();
+    }catch(e){$("health").textContent="Erro de conexão: "+e.message;}
+  }
+  $("category-form").onsubmit=async function(ev){
+    ev.preventDefault();
+    try{await write("/categories","POST",{name:$("cat-name").value,description:$("cat-description").value||null,display_order:Number($("cat-order").value)});
+      this.reset();show("Categoria cadastrada.");await load();
+    }catch(e){show(e.message,true);}
+  };
+  $("product-form").onsubmit=async function(ev){
+    ev.preventDefault();
+    try{await write("/products","POST",{category_id:$("prod-category").value,title:$("prod-title").value,
+      description:$("prod-description").value||null,price:Number($("prod-price").value)});
+      this.reset();show("Produto cadastrado.");await load();
+    }catch(e){show(e.message,true);}
+  };
+  load();
+}());
+</script>
+</body></html>
