@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cardápio online | Restaurant Ordering System</title>
+<meta name="description" content="Catálogo demonstrativo de restaurante com dados ao vivo do Supabase">
+<style>
+:root{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:#e8f6ed;background:#09130f}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 80% 0%,#254835 0,transparent 35%),#09130f}
+main{width:min(1050px,calc(100% - 36px));margin:0 auto;padding:46px 0 70px}
+h1{font-size:clamp(30px,5vw,55px);margin:12px 0 10px;letter-spacing:-.04em}h2{font-size:23px;margin:0 0 20px}
+.tag{font-size:12px;font-weight:800;letter-spacing:.15em;color:#8ee0a8;text-transform:uppercase}
+p{color:#b9cec2;line-height:1.5}.hero{padding:40px 0 22px}.hero p{max-width:650px}
+.panel{border:1px solid #345745;background:#112019d9;border-radius:17px;padding:22px;margin-top:24px}
+.chips{display:flex;flex-wrap:wrap;gap:9px}.chip{border:1px solid #3a6250;border-radius:99px;background:#1a3124;color:#d2f7dc;padding:9px 16px;cursor:pointer}
+.chip[aria-pressed=true]{background:#a3eabe;color:#092417;border-color:#a3eabe}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(245px,1fr));gap:16px}
+.card{border:1px solid #345745;background:linear-gradient(145deg,#1c3728,#12231b);border-radius:15px;padding:20px;min-height:176px;display:flex;flex-direction:column}
+.card small{color:#9edfb5}.card h3{font-size:22px;margin:13px 0 6px}.card p{margin:0 0 20px;flex:1}.price{font-weight:850;font-size:22px;color:#c3f5d5}
+button{font:inherit;cursor:pointer}button.primary{background:#a3eabe;color:#092417;border:0;border-radius:10px;padding:12px 18px;font-weight:700}
+label{display:block;font-weight:650;color:#cde8d5;font-size:14px;margin:12px 0 6px}
+input,select{background:#0d1b14;color:#fff;border:1px solid #436e56;padding:12px;border-radius:10px;width:100%;font:inherit}
+input:focus,select:focus,button:focus-visible{outline:2px solid #a3eabe;outline-offset:2px}
+.flex{display:flex;gap:16px;flex-wrap:wrap}.flex>div{flex:1;min-width:190px}
+.muted{color:#8dad9a}summary{cursor:pointer;font-weight:700;font-size:18px}
+hr{border:0;border-top:1px solid #345745;margin:25px 0}
+.toast{color:#d5f9e0;border-radius:10px;padding:12px;display:none;background:#23432e;margin:14px 0}
+footer{margin-top:40px;color:#82a08f;font-size:13px}
+footer a{color:#a3eabe}.danger{border:1px solid #975251;background:#382122;color:#ffd2c9;border-radius:8px;padding:6px 9px;font-size:12px;align-self:flex-end}
+.warn{color:#ffdfb0}
+
+.notice{border:1px solid #508264;border-radius:12px;padding:12px 16px;margin-top:20px;font-size:14px;background:#203729}
+.retry{margin-top:14px}
+</style></head>
+<body><main>
+<section class="hero"><span class="tag">Projeto Desenvolvimento Back-End · Demonstração pública</span>
+<h1>Restaurant Ordering System</h1>
+<p>Veja o cardápio do projeto conectado ao PostgreSQL, hospedado no Supabase em São Paulo.</p>
+<div id="health" class="tag" role="status" aria-live="polite">Conectando ao banco de dados...</div>
+<div class="notice">Prévia pública, somente leitura. Para administrar o catálogo, utilize a versão de desenvolvimento local. Não digite senhas ou chaves neste site de prévia.</div>
+</section>
+<section class="panel"><h2>Categorias</h2><div id="categories" class="chips"></div></section>
+<section class="panel"><h2>Cardápio</h2><div id="products" class="grid"><p>Carregando...</p></div>
+<button id="retry" class="primary retry" type="button" hidden>Tentar novamente</button></section>
+<footer>Código-fonte da disciplina: <a href="https://github.com/hhenriquehhenneberg-crypto/restaurant-ordering-system-backend" target="_blank" rel="noopener noreferrer">GitHub</a>. A prévia usa hospedagem de terceiros até a ativação do GitHub Pages.</footer>
+</main>
+<script>
+(()=>{
+  "use strict";
+  const api="https://uxrixrkhrvzgitsjfgml.supabase.co/functions/v1/restaurant-catalog", $=id=>document.getElementById(id);
+  let categories=[],products=[],active="";
+  const create=(tag,value,className)=>{const e=document.createElement(tag);if(value!==undefined)e.textContent=value;if(className)e.className=className;return e};
+  const cash=value=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(value));
+  async function fetchJSON(path){
+    const result=await fetch(api+"/api/"+path,{headers:{"Accept":"application/json"}});
+    if(!result.ok)throw new Error("HTTP "+result.status);
+    return result.json();
+  }
+  function render(){
+    const chips=$("categories");chips.replaceChildren();
+    [{id:"",name:"Todas"}].concat(categories).forEach(c=>{
+      const b=create("button",c.name,"chip");b.type="button";
+      b.setAttribute("aria-pressed",String(active===c.id));
+      b.addEventListener("click",()=>{active=c.id;render()});chips.appendChild(b);
+    });
+    const grid=$("products");grid.replaceChildren();
+    const shown=products.filter(p=>!active||p.category_id===active);
+    if(!shown.length)grid.appendChild(create("p","Nenhum produto disponível nesta categoria."));
+    shown.forEach(p=>{
+      const card=create("article",undefined,"card");
+      card.appendChild(create("small",p.category_name||"Produto"));
+      card.appendChild(create("h3",p.title));
+      card.appendChild(create("p",p.description||"Produto do cardápio."));
+      card.appendChild(create("span",cash(p.price),"price"));
+      if(!p.available)card.appendChild(create("small","Indisponível no momento","warn"));
+      grid.appendChild(card);
+    });
+  }
+  async function load(){
+    $("retry").hidden=true;$("health").textContent="Consultando o Supabase...";
+    try{
+      const [cats,prods,health]=await Promise.all([fetchJSON("categories"),fetchJSON("products"),fetchJSON("health")]);
+      if(health.status!=="ok")throw new Error("Banco indisponível");
+      categories=cats;products=prods;
+      $("health").textContent="● Banco conectado · Cardápio atualizado";
+      render();
+    }catch(e){
+      $("health").textContent="Não foi possível carregar: "+e.message;
+      $("products").replaceChildren(create("p","Verifique sua conexão e tente novamente."));
+      $("retry").hidden=false;
+    }
+  }
+  $("retry").addEventListener("click",load);load();
+})();
+</script>
+</body></html>

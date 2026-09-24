@@ -1,5 +1,8 @@
 # Restaurant Ordering System – Back-End
 
+> **[ABRIR CARDÁPIO ONLINE (prévia pública, somente leitura)](https://raw.githack.com/hhenriquehhenneberg-crypto/restaurant-ordering-system-backend/main/docs/preview.html)**. O GitHub Pages ainda exige habilitação inicial pelo proprietário do repositório. Até lá, este endereço de terceiros serve o HTML do GitHub; não insira chaves ou senhas nessa prévia.
+
+
 Projeto incremental da disciplina Desenvolvimento Back-End (Engenharia de Software, 4º período). Esta versão implementa o **catálogo** de um sistema de autoatendimento para restaurantes. Pedidos e Cozinha são possíveis módulos posteriores, não fazem parte deste CRUD.
 
 ## Tecnologias e arquitetura
