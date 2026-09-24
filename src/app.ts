@@ -1,6 +1,7 @@
 import express, { type ErrorRequestHandler } from "express";
 import categoryRoutes from "./routes/categoryRoutes";
 import productRoutes from "./routes/productRoutes";
+import { database } from "./database/connection";
 
 const app = express();
 app.disable("x-powered-by");
@@ -9,6 +10,15 @@ app.get("/", (_req, res) => res.json({
   project: "Restaurant Ordering System", version: "1.1.0",
   resources: ["/categories", "/products"]
 }));
+app.get("/health", async (_req, res) => {
+  try {
+    await database.query("select 1");
+    return res.status(200).json({ status: "ok", database: "connected" });
+  } catch (error) {
+    console.error("Falha na verificação do banco:", error instanceof Error ? error.message : "erro desconhecido");
+    return res.status(503).json({ status: "unavailable", database: "disconnected" });
+  }
+});
 app.use("/categories", categoryRoutes);
 app.use("/products", productRoutes);
 app.use((_req, res) => res.status(404).json({ message: "Rota não encontrada." }));

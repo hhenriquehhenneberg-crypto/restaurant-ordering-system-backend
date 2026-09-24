@@ -28,6 +28,7 @@ test("CRUD HTTP real com banco PostgreSQL isolado", {
     });
   const categoryBody = { name: "Teste API " + Date.now(), display_order: 9, icon: "🍕" };
   assert.equal((await call("/")).status, 200);
+  assert.deepEqual(await (await call("/health")).json(), { status: "ok", database: "connected" });
   assert.equal((await call("/categories", "POST", categoryBody, false)).status, 401);
   assert.equal((await call("/categories", "POST", { name: "", display_order: 1 })).status, 400);
   assert.equal((await call("/products/nao-uuid")).status, 400);

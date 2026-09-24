@@ -56,6 +56,24 @@ O projeto Supabase **restaurant-ordering-system**, criado na região **sa-east-1
 
 A política RLS deste projeto não concede acesso direto às chaves públicas do Supabase, pois o fluxo previsto é tablet → back-end Express → PostgreSQL. Caso uma disciplina futura passe a usar consultas diretas do front-end, será necessário planejar políticas apropriadas sem expor credenciais de servidor.
 
+## Configurar a conexão real no Windows (assistente)
+O projeto de aula e o banco Supabase já estão criados. Para **ligar esta API ao seu banco**, basta configurar a URI PostgreSQL privada **no computador onde o Node.js será executado**. O conector do ChatGPT não instala arquivos nem executa processos no seu computador.
+
+1. Entre no [Supabase, projeto restaurant-ordering-system](https://supabase.com/dashboard/project/uxrixrkhrvzgitsjfgml). No botão **Connect**, escolha **Connection string → Session pooler**, ideal para computadores sem IPv6. Copie **a URI completa**. Se você não souber a senha criada durante o provisionamento, redefina a senha do banco em **Project Settings → Database** antes de continuar.
+2. No PowerShell, na pasta do repositório, instale as dependências e execute o assistente abaixo. Ele pede a URI sem mostrá-la na tela e, caso exista o marcador `[YOUR-PASSWORD]`, solicita também a senha ocultamente e a codifica para URI.
+
+```powershell
+npm install
+powershell -ExecutionPolicy Bypass -File .\scripts\setup-windows.ps1
+npm run doctor
+npm run dev
+```
+
+3. Verifique `http://localhost:3000/health`: a resposta deve ser `{"status":"ok","database":"connected"}`. Depois acesse `/categories` e `/products`; o banco inicial possui três categorias e dois produtos.
+4. O script gera uma chave `ADMIN_API_KEY` aleatória e a mantém **somente no .env local**. Para usar POST/PUT/DELETE, copie seu valor do arquivo local para o cabeçalho `x-admin-key` do Postman. **Não cole as senhas ou chaves no chat nem as envie ao GitHub.**
+
+Se o `.env` já existir, o assistente o preservará. Para configuração manual, copie `.env.example` para `.env`, substitua `DATABASE_URL` e gere `ADMIN_API_KEY` de forma segura. O script `doctor` apenas lê o banco, não modifica dados. O `GET /health` verifica em tempo real se a API consegue consultar o PostgreSQL.
+
 ## Instalação
 
 1. Clone o repositório, instale Node.js 20+ e execute `npm install`.
