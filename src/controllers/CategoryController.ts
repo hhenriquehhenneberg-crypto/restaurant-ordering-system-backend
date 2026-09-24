@@ -1,77 +1,76 @@
-import { randomUUID } from "node:crypto";
-import { Request, Response } from "express";
-import { database } from "../database/connection";
+import type { Request, Response } from "express";
+import { CategoryModel } from "../models/Category";
+import { isUuid, parseCategory } from "../utils/validation";
 
 export class CategoryController {
   async list(_req: Request, res: Response) {
     try {
-      const result = await database.query(
-        `select id, name, description, icon, display_order, active, created_at, updated_at
-         from categories
-         where active = true
-         order by display_order, name`
-      );
-
-      return res.json(result.rows);
+      return res.status(200).json(await CategoryModel.list());
     } catch (error) {
       console.error("Erro ao listar categorias:", error);
-      return res.status(500).json({ message: "Erro ao buscar categorias" });
+      return res.status(500).json({ message: "Erro interno ao listar categorias." });
     }
   }
-
-  async create(req: Request, res: Response) {
-    const { name, description = null, icon = null, display_order } = req.body;
-
-    const categoryName = typeof name === "string" ? name.trim() : "";
-    const categoryDescription =
-      typeof description === "string" ? description.trim() : description;
-    const categoryIcon = typeof icon === "string" ? icon.trim() : icon;
-    const displayOrder = Number(display_order);
-
-    if (!categoryName) {
-      return res.status(400).json({ message: "O nome da categoria é obrigatório" });
+  async search(req: Request, res: Response) {
+    const keyword = req.query.keyword;
+    if (typeof keyword !== "string" || !keyword.trim() || keyword.length > 80) {
+      return res.status(400).json({ message: "keyword deve ter de 1 a 80 caracteres." });
     }
-
-    if (categoryName.length > 100) {
-      return res.status(400).json({ message: "O nome pode ter no máximo 100 caracteres" });
-    }
-
-    if (categoryDescription !== null && typeof categoryDescription !== "string") {
-      return res.status(400).json({ message: "A descrição deve ser um texto" });
-    }
-
-    if (categoryDescription && categoryDescription.length > 255) {
-      return res.status(400).json({ message: "A descrição pode ter no máximo 255 caracteres" });
-    }
-
-    if (categoryIcon !== null && typeof categoryIcon !== "string") {
-      return res.status(400).json({ message: "O ícone deve ser um texto" });
-    }
-
-    if (categoryIcon && categoryIcon.length > 10) {
-      return res.status(400).json({ message: "O ícone pode ter no máximo 10 caracteres" });
-    }
-
-    if (!Number.isInteger(displayOrder) || displayOrder < 0) {
-      return res.status(400).json({
-        message: "display_order deve ser um número inteiro maior ou igual a zero",
-      });
-    }
-
     try {
-      const id = randomUUID();
-
-      const result = await database.query(
-        `insert into categories (id, name, description, icon, display_order)
-         values ($1, $2, $3, $4, $5)
-         returning *`,
-        [id, categoryName, categoryDescription, categoryIcon, displayOrder]
-      );
-
-      return res.status(201).json(result.rows[0]);
+      return res.status(200).json(await CategoryModel.search(keyword.trim()));
+    } catch (error) {
+      console.error("Erro na pesquisa de categorias:", error);
+      return res.status(500).json({ message: "Erro interno ao pesquisar categorias." });
+    }
+  }
+  async get(req: Request, res: Response) {
+    const id = req.params.id;
+    if (!isUuid(id)) return res.status(400).json({ message: "UUID de categoria inválido." });
+    try {
+      const category = await CategoryModel.get(id);
+      return category ? res.json(category) : res.status(404).json({ message: "Categoria não encontrada." });
+    } catch (error) {
+      console.error("Erro ao consultar categoria:", error);
+      return res.status(500).json({ message: "Erro interno ao consultar categoria." });
+    }
+  }
+  async create(req: Request, res: Response) {
+    const parsed = parseCategory(req.body);
+    if (!parsed.ok) return res.status(400).json({ message: parsed.error });
+    try {
+      return res.status(201).json(await CategoryModel.create(parsed.value));
     } catch (error) {
       console.error("Erro ao criar categoria:", error);
-      return res.status(500).json({ message: "Erro ao criar categoria" });
+      return res.status(500).json({ message: "Erro interno ao criar categoria." });
+    }
+  }
+  async update(req: Request, res: Response) {
+    const id = req.params.id;
+    if (!isUuid(id)) return res.status(400).json({ message: "UUID de categoria inválido." });
+    const parsed = parseCategory(req.body, true);
+    if (!parsed.ok) return res.status(400).json({ message: parsed.error });
+    try {
+      const category = await CategoryModel.update(id, parsed.value);
+      return category ? res.json(category) : res.status(404).json({ message: "Categoria não encontrada." });
+    } catch (error) {
+      console.error("Erro ao atualizar categoria:", error);
+      return res.status(500).json({ message: "Erro interno ao atualizar categoria." });
+    }
+  }
+  async remove(req: Request, res: Response) {
+    const id = req.params.id;
+    if (!isUuid(id)) return res.status(400).json({ message: "UUID de categoria inválido." });
+    try {
+      const removed = await CategoryModel.remove(id);
+      return removed ? res.status(204).end() : res.status(404).json({ message: "Categoria não encontrada." });
+    } catch (error) {
+      if ((error as { code?: string }).code === "23503") {
+        return res.status(409).json({
+          message: "Esta categoria ainda possui produtos. Remova ou transfira os produtos antes."
+        });
+      }
+      console.error("Erro ao remover categoria:", error);
+      return res.status(500).json({ message: "Erro interno ao remover categoria." });
     }
   }
 }

@@ -1,10 +1,13 @@
 import { Router } from "express";
 import { ProductController } from "../controllers/ProductController";
+import { requireAdmin } from "../middleware/admin";
 
-const productRoutes = Router();
+const routes = Router();
 const controller = new ProductController();
 
-productRoutes.get("/", (req, res) => controller.list(req, res));
-productRoutes.post("/", (req, res) => controller.create(req, res));
-
-export default productRoutes;
+routes.get("/", (req, res) => controller.list(req, res));
+routes.get("/:id", (req, res) => controller.get(req, res));
+routes.post("/", requireAdmin, (req, res) => controller.create(req, res));
+routes.put("/:id", requireAdmin, (req, res) => controller.update(req, res));
+routes.delete("/:id", requireAdmin, (req, res) => controller.remove(req, res));
+export default routes;

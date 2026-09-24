@@ -1,12 +1,17 @@
 {
   "name": "restaurant-ordering-system-backend",
-  "version": "1.0.0",
-  "description": "Back-end do sistema de autoatendimento para restaurantes",
+  "version": "1.1.0",
+  "private": true,
+  "description": "API REST MVC de catálogo para autoatendimento em restaurantes",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "test": "tsx --test tests/validation.test.ts tests/api.test.ts"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
     "dotenv": "^17.2.1",

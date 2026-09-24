@@ -1,184 +1,122 @@
-# Restaurant Ordering System - Back-End
+# Restaurant Ordering System – Back-End
 
-Projeto da disciplina de Back-End Development.
+Projeto incremental da disciplina Desenvolvimento Back-End (Engenharia de Software, 4º período). Esta versão implementa o **catálogo** de um sistema de autoatendimento para restaurantes. Pedidos e Cozinha são possíveis módulos posteriores, não fazem parte deste CRUD.
 
-A proposta é construir aos poucos um sistema de autoatendimento para restaurante. Nesta etapa estou trabalhando somente com o catálogo: categorias e produtos. A parte de pedidos, cozinha e outras funcionalidades fica para as próximas etapas do curso.
+## Tecnologias e arquitetura
 
-## O que já foi feito
+- Node.js (20+), TypeScript, Express 5;
+- PostgreSQL 14+ (local ou hospedado no **Supabase**, via conexão PostgreSQL com a biblioteca pg);
+- arquitetura MVC: Routes → Controllers → Models → Banco;
+- Git/GitHub, Collection do Postman e testes com node:test.
 
-- projeto Node.js com TypeScript;
-- servidor com Express;
-- conexão com PostgreSQL;
-- tabela de categorias;
-- tabela de produtos;
-- relacionamento de produto com categoria;
-- listagem e cadastro de categorias;
-- listagem e cadastro de produtos;
-- validações básicas dos dados recebidos;
-- testes das rotas usando Postman.
+O banco é acessado diretamente com a URI PostgreSQL: **não** é necessário usar a API JavaScript do Supabase para executar este projeto.
 
 ## Estrutura
 
 ```text
-restaurant-ordering-system-backend/
-├── database/
-│   ├── schema.sql
-│   └── seed.sql
-├── postman/
-│   └── Restaurant Ordering System API.postman_collection.json
-├── src/
-│   ├── controllers/
-│   │   ├── CategoryController.ts
-│   │   └── ProductController.ts
-│   ├── database/
-│   │   └── connection.ts
-│   ├── models/
-│   │   ├── Category.ts
-│   │   └── Product.ts
-│   ├── routes/
-│   │   ├── categoryRoutes.ts
-│   │   └── productRoutes.ts
-│   ├── app.ts
-│   └── server.ts
-├── .env.example
-├── .gitignore
-├── package.json
-└── tsconfig.json
+src/
+  app.ts                 # Middleware JSON, montagem das rotas e erros globais
+  server.ts              # Inicialização e verificação do banco
+  controllers/           # Requisições HTTP e respostas
+  models/                # SQL parametrizado e modelos de domínio
+  routes/                # Endpoints e proteção de escrita
+  middleware/admin.ts    # Autorização por chave administrativa
+  utils/validation.ts    # Validações de entradas
+  database/              # Pool PostgreSQL e helper de atualização
+database/
+  schema.sql             # Criação das tabelas, índices e triggers
+  migrate.sql            # Atualização opcional do esquema antigo
+  seed.sql               # Categorias e produtos de exemplo
+postman/                 # Collection para importar no Postman
+tests/                   # Testes unitários e teste HTTP com PostgreSQL
+.github/workflows/ci.yml # Build e testes automáticos
 ```
 
-## Relação atual do banco
+## Entidades e relacionamento
 
-Uma categoria pode ter vários produtos, mas cada produto pertence a uma categoria.
+Uma **Categoria (1)** possui **vários Produtos (N)**; cada produto possui `category_id` apontando para `categories.id`. Os identificadores são UUIDs.
 
-```text
-categories
-    1
-    |
-    |---- N
-           products
-```
+| Entidade | Campos |
+| --- | --- |
+| categories | id, name, description, icon, display_order, active, created_at, updated_at |
+| products | id, category_id, title, description, price, image, available, active, created_at, updated_at |
 
-O campo `products.category_id` aponta para `categories.id`.
+A API pública lista apenas categorias e produtos ativos. Ao apagar uma categoria com produtos, a API responde HTTP 409, preservando a integridade do banco. `price` é NUMERIC(10,2); o driver pg o devolve como string no JSON para evitar perda de precisão. As operações DELETE removem fisicamente registros; a opção `active:false` serve para ocultá-los sem excluir.
 
-## Banco de dados
+## Instalação
 
-O PostgreSQL é usado para armazenar os dados.
+1. Clone o repositório, instale Node.js 20+ e execute `npm install`.
+2. Crie um banco PostgreSQL local ou um projeto Supabase. Execute `database/schema.sql` no editor SQL (ou via `psql`); execute `database/seed.sql` se quiser dados de exemplo. **Se já utiliza o banco criado em agosto**, faça backup e aplique `database/migrate.sql`, depois `database/schema.sql`; não recrie nem apague dados existentes.
+3. Copie `.env.example` para `.env`; configure `DATABASE_URL` e uma `ADMIN_API_KEY` privada de pelo menos 24 caracteres.
+4. Execute `npm run dev` e abra `http://localhost:3000`. Para produção, `npm run build` e `npm start`.
 
-Primeiro execute:
+Exemplo de variáveis (substitua os valores):
 
-```text
-database/schema.sql
-```
-
-Se quiser colocar alguns dados de teste, execute depois:
-
-```text
-database/seed.sql
-```
-
-O `seed.sql` cria algumas categorias e produtos simples para facilitar os testes.
-
-## Configuração do projeto
-
-Instale as dependências:
-
-```bash
-npm install
-```
-
-Crie um arquivo `.env` baseado no `.env.example`:
-
-```env
+```dotenv
 PORT=3000
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/restaurant_ordering
+DATABASE_URL=postgresql://postgres:senha@localhost:5432/restaurant_ordering
+ADMIN_API_KEY=gere-uma-chave-privada-longa-e-aleatoria
 ```
 
-Depois execute:
+No Supabase, use **Connect → Connection string** e uma URI PostgreSQL apropriada, preferencialmente o pooler quando necessário; para conexão hospedada habilite SSL conforme as instruções da plataforma. Não exponha a string de conexão nem a chave administrativa no front-end, no Postman compartilhado ou no GitHub. O `.gitignore` protege `.env` e suas variações.
 
-```bash
-npm run dev
-```
+## Endpoints
 
-A API ficará disponível em:
+| Método | Rota | Ação | Autenticação |
+| --- | --- | --- | --- |
+| GET | / | Informações do serviço | Pública |
+| GET | /categories | Lista categorias ativas | Pública |
+| GET | /categories/search?keyword=pizza | Pesquisa nome e descrição | Pública |
+| GET | /categories/:id | Consulta categoria ativa | Pública |
+| POST | /categories | Cadastra categoria | x-admin-key |
+| PUT | /categories/:id | Atualiza campos informados | x-admin-key |
+| DELETE | /categories/:id | Apaga categoria sem produtos | x-admin-key |
+| GET | /products | Lista produtos ativos | Pública |
+| GET | /products?category_id=UUID | Filtra por categoria | Pública |
+| GET | /products/:id | Consulta produto ativo | Pública |
+| POST | /products | Cadastra produto | x-admin-key |
+| PUT | /products/:id | Atualiza campos informados | x-admin-key |
+| DELETE | /products/:id | Apaga produto | x-admin-key |
 
-```text
-http://localhost:3000
-```
-
-## Rotas desenvolvidas até agora
-
-### Categorias
-
-Listar categorias:
-
-```http
-GET /categories
-```
-
-Criar categoria:
-
-```http
-POST /categories
-```
-
-Exemplo:
+Corpos JSON de exemplo:
 
 ```json
 {
-  "name": "Pizzas",
-  "description": "Pizzas do cardápio",
-  "icon": "🍕",
-  "display_order": 1
+  "name": "Pizzas", "description": "Pizzas especiais",
+  "icon": "🍕", "display_order": 1, "active": true
 }
 ```
-
-### Produtos
-
-Listar produtos:
-
-```http
-GET /products
-```
-
-A listagem também mostra o nome da categoria do produto, usando o relacionamento entre as duas tabelas.
-
-Criar produto:
-
-```http
-POST /products
-```
-
-Exemplo:
 
 ```json
 {
   "category_id": "11111111-1111-4111-8111-111111111111",
-  "title": "Pizza Margherita",
-  "description": "Mussarela, tomate e manjericão",
-  "price": 45.90,
-  "image": null,
-  "available": true
+  "title": "Pizza Margherita", "description": "Mussarela e manjericão",
+  "price": 39.90, "image": null, "available": true, "active": true
 }
 ```
 
-O produto só é cadastrado se a categoria informada existir e estiver ativa.
+Para UPDATE, envie apenas os campos que deseja modificar, por exemplo `{"price": 44.90}`. Use `Content-Type: application/json` e `x-admin-key: SUA_CHAVE` nas operações de escrita.
 
-## Postman
+### Respostas HTTP
 
-A Collection está na pasta `postman`.
+- **200** consulta ou atualização; **201** criação; **204** exclusão (sem corpo);
+- **400** JSON/campos/UUID inválidos ou categoria de produto inexistente/inativa;
+- **401/403** chave administrativa ausente/inválida;
+- **404** rota ou registro público não encontrado;
+- **409** tentativa de apagar categoria que possui produtos;
+- **413** JSON excede o limite de 64 KB; **500** erro interno.
 
-Ela possui as quatro requisições trabalhadas nesta etapa:
+## Testes e Postman
 
-```text
-Categories
-├── GET - List Categories
-└── POST - Create Category
+- `npm run build` verifica a compilação TypeScript.
+- `npm test` roda os testes de validação. Os testes de integração HTTP + PostgreSQL são habilitados ao definir **TEST_DATABASE_URL** apontando para um **banco exclusivo de testes**, nunca de produção.
+- A CI do GitHub sobe um PostgreSQL temporário, compila e testa automaticamente a branch e os Pull Requests.
+- Importe `postman/Restaurant Ordering System API.postman_collection.json`. Defina a variável `admin_key` com sua chave privada local. Faça primeiro o cadastro da categoria e depois do produto. As requisições POST salvam os UUIDs retornados nas variáveis da Collection.
 
-Products
-├── GET - List Products
-└── POST - Create Product
-```
+## Organização do projeto da disciplina
 
-## Observação
+O catálogo é o **exercício realizado em sala**, não necessariamente a entrega independente da APS. Os materiais da disciplina divergem quanto à quantidade mínima de entidades e à distribuição da nota da APS; confirme a orientação atual do professor antes de reaproveitar este projeto como entrega. É importante conseguir explicar o fluxo Routes → Controllers → Models → PostgreSQL e demonstrar as validações e a relação entre as entidades.
 
-Por enquanto mantive o projeto simples de propósito. A ideia é ir evoluindo a mesma aplicação conforme novos conteúdos forem vistos nas aulas, sem tentar colocar todas as partes do sistema de uma vez.
+## Segurança e limites
+
+As consultas são públicas e alterações requerem uma chave privada via cabeçalho. Esta autenticação simples é adequada para demonstrar o princípio de proteção de rotas; antes de uso comercial, considere usuários, permissões, rotação de chaves, limites de requisição e política de acesso ao banco. **Nunca publique o arquivo .env.**
