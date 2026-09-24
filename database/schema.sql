@@ -25,7 +25,7 @@ create index if not exists idx_products_category_id on products(category_id);
 create index if not exists idx_categories_display_order on categories(display_order);
 
 create or replace function set_updated_at()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql set search_path = pg_catalog as $
 begin
     new.updated_at = now();
     return new;

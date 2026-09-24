@@ -43,6 +43,19 @@ Uma **Categoria (1)** possui **vários Produtos (N)**; cada produto possui `cate
 
 A API pública lista apenas categorias e produtos ativos. Ao apagar uma categoria com produtos, a API responde HTTP 409, preservando a integridade do banco. `price` é NUMERIC(10,2); o driver pg o devolve como string no JSON para evitar perda de precisão. As operações DELETE removem fisicamente registros; a opção `active:false` serve para ocultá-los sem excluir.
 
+## Supabase do projeto (São Paulo)
+
+O projeto Supabase **restaurant-ordering-system**, criado na região **sa-east-1 (São Paulo)**, já possui as tabelas e o relacionamento, a proteção RLS e dados de exemplo (3 categorias, 2 produtos).
+
+- [Abrir o projeto no Supabase](https://supabase.com/dashboard/project/uxrixrkhrvzgitsjfgml)
+- A conexão **não é uma chave pública nem a URL da API REST**: o back-end Node usa uma URI PostgreSQL privada, fornecida no painel do Supabase.
+- No painel, use **Connect → Connection string → Session pooler** (adequado quando a máquina não possui IPv6). Copie a URI para `DATABASE_URL` **no arquivo .env local**, substitua a senha e use TLS conforme indicado no painel, por exemplo `?sslmode=require` quando necessário.
+- Defina também `ADMIN_API_KEY` como segredo longo, com no mínimo 24 caracteres. Nunca publique esse segredo ou a senha do banco no GitHub.
+- Execute `npm install && npm run dev`; verifique `GET http://localhost:3000/categories` e `GET http://localhost:3000/products`.
+- **A API Node não foi implantada em um servidor público:** o provisionamento do banco não equivale a hospedar o Express. Apenas o esquema e os dados de teste estão ativos no Supabase.
+
+A política RLS deste projeto não concede acesso direto às chaves públicas do Supabase, pois o fluxo previsto é tablet → back-end Express → PostgreSQL. Caso uma disciplina futura passe a usar consultas diretas do front-end, será necessário planejar políticas apropriadas sem expor credenciais de servidor.
+
 ## Instalação
 
 1. Clone o repositório, instale Node.js 20+ e execute `npm install`.
