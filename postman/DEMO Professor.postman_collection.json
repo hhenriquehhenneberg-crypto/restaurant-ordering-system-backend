@@ -1,0 +1,480 @@
+{
+  "info": {
+    "name": "Restaurant Ordering System | DEMO Professor",
+    "description": "Execute no Runner, na ordem. Exige API Express local com conexão Supabase e admin_key definida SOMENTE localmente. Cria registros temporários, valida HTTP, testa chave e FK, remove ambos ao final. Não rode contra um banco com dados não recuperáveis.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "admin_key",
+      "value": ""
+    },
+    {
+      "key": "demo_run_id",
+      "value": ""
+    },
+    {
+      "key": "category_id",
+      "value": ""
+    },
+    {
+      "key": "product_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Banco conectado",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/health",
+        "description": "Verifica Express consultando PostgreSQL"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('demo_run_id',String(Date.now()));pm.collectionVariables.unset('category_id');pm.collectionVariables.unset('product_id');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"01 - Banco conectado → HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test('Banco conectado',()=>{pm.expect(pm.response.json().database).to.eql('connected')});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Listar categorias",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/categories",
+        "description": "Leitura pública"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"02 - Listar categorias → HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test('Resposta em lista',()=>pm.expect(pm.response.json()).to.be.an('array'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Proteção: tentar criar sem chave",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/categories",
+        "description": "Rejeitar escrita anônima",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Não cadastrar\",\n  \"display_order\": 90\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"03 - Proteção: tentar criar sem chave → HTTP 401\", function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Validação: nome em branco",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-admin-key",
+            "value": "{{admin_key}}"
+          }
+        ],
+        "url": "{{base_url}}/categories",
+        "description": "Rejeitar dados inválidos",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"\",\n  \"display_order\": 90\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"04 - Validação: nome em branco → HTTP 400\", function () { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Criar categoria temporária",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-admin-key",
+            "value": "{{admin_key}}"
+          }
+        ],
+        "url": "{{base_url}}/categories",
+        "description": "Salva novo UUID em category_id",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demonstração {{demo_run_id}}\",\n  \"description\": \"Registro temporário para mostrar ao professor\",\n  \"display_order\": 90,\n  \"active\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"05 - Criar categoria temporária → HTTP 201\", function () { pm.response.to.have.status(201); });",
+              "const c=pm.response.json();pm.test('UUID de categoria',()=>pm.expect(c.id).to.match(/^[0-9a-f-]{36}$/i));pm.collectionVariables.set('category_id',c.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Consultar categoria por UUID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/categories/{{category_id}}",
+        "description": "Consulta registro criado"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"06 - Consultar categoria por UUID → HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test('Mesma categoria',()=>pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('category_id')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Atualizar categoria",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-admin-key",
+            "value": "{{admin_key}}"
+          }
+        ],
+        "url": "{{base_url}}/categories/{{category_id}}",
+        "description": "PUT de descrição e ordem",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"description\": \"Atualizada na apresentação\",\n  \"display_order\": 91\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"07 - Atualizar categoria → HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test('Ordem atualizada',()=>pm.expect(pm.response.json().display_order).to.eql(91));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - Criar produto temporário",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-admin-key",
+            "value": "{{admin_key}}"
+          }
+        ],
+        "url": "{{base_url}}/products",
+        "description": "Produto ligado à categoria recém-criada",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"category_id\": \"{{category_id}}\",\n  \"title\": \"Produto temporário da demonstração\",\n  \"description\": \"Excluir ao final\",\n  \"price\": 19.9,\n  \"available\": true,\n  \"active\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"08 - Criar produto temporário → HTTP 201\", function () { pm.response.to.have.status(201); });",
+              "const p=pm.response.json();pm.test('FK aponta para a categoria',()=>pm.expect(p.category_id).to.eql(pm.collectionVariables.get('category_id')));pm.collectionVariables.set('product_id',p.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 - Consultar produto por UUID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/products/{{product_id}}",
+        "description": "JOIN retorna o nome da categoria"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"09 - Consultar produto por UUID → HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test('Categoria no JOIN',()=>pm.expect(pm.response.json().category_name).to.include('Demonstração'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 - Filtrar produtos pela categoria",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/products?category_id={{category_id}}",
+        "description": "Filtro de chave estrangeira"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"10 - Filtrar produtos pela categoria → HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test('Filtro correto',()=>{const a=pm.response.json();pm.expect(a).to.be.an('array');pm.expect(a.some(x=>x.id===pm.collectionVariables.get('product_id'))).to.eql(true)});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 - Atualizar produto",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-admin-key",
+            "value": "{{admin_key}}"
+          }
+        ],
+        "url": "{{base_url}}/products/{{product_id}}",
+        "description": "Altera preço e disponibilidade",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"price\": 24.9,\n  \"available\": false\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"11 - Atualizar produto → HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test('Novo preço',()=>pm.expect(Number(pm.response.json().price)).to.eql(24.9));pm.test('Indisponível',()=>pm.expect(pm.response.json().available).to.eql(false));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 - FK impede excluir categoria com produto",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-admin-key",
+            "value": "{{admin_key}}"
+          }
+        ],
+        "url": "{{base_url}}/categories/{{category_id}}",
+        "description": "Mostra integridade referencial"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"12 - FK impede excluir categoria com produto → HTTP 409\", function () { pm.response.to.have.status(409); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 - Excluir produto temporário",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-admin-key",
+            "value": "{{admin_key}}"
+          }
+        ],
+        "url": "{{base_url}}/products/{{product_id}}",
+        "description": "Limpeza segura"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"13 - Excluir produto temporário → HTTP 204\", function () { pm.response.to.have.status(204); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 - Excluir categoria temporária",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-admin-key",
+            "value": "{{admin_key}}"
+          }
+        ],
+        "url": "{{base_url}}/categories/{{category_id}}",
+        "description": "Limpeza após excluir produto"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"14 - Excluir categoria temporária → HTTP 204\", function () { pm.response.to.have.status(204); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 - Confirmar exclusão",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/categories/{{category_id}}",
+        "description": "O UUID removido não existe mais"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"15 - Confirmar exclusão → HTTP 404\", function () { pm.response.to.have.status(404); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
