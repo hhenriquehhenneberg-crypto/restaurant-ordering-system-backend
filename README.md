@@ -5,6 +5,20 @@
 
 Projeto incremental da disciplina Desenvolvimento Back-End (Engenharia de Software, 4º período). Esta versão implementa o **catálogo** de um sistema de autoatendimento para restaurantes. Pedidos e Cozinha são possíveis módulos posteriores, não fazem parte deste CRUD.
 
+## Demonstração do Tech Challenge para o professor
+
+Este projeto de sala de aula deve ser demonstrado **com o back-end Express em execução**, não somente com o cardápio visual. O banco Supabase do projeto já possui 3 categorias e 2 produtos de exemplo; a conexão da sua máquina ao Express ainda requer a URI PostgreSQL privada no `.env` local.
+
+No Windows, depois de baixar/clonar o repositório, execute **um comando** no PowerShell, dentro da pasta do projeto:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\apresentar.ps1
+```
+
+O assistente instala dependências, solicita a string de conexão sem exibi-la caso o `.env` ainda não exista, verifica se a conexão alcança o banco e inicia a API em `http://localhost:3000`. Não publique a senha no GitHub e não a envie pelo chat. Depois, importe `postman/DEMO Professor.postman_collection.json` no Postman e informe `admin_key` **localmente** usando o segredo `ADMIN_API_KEY` presente no seu `.env`. No Runner da Collection, execute as requisições na ordem e mostre o CRUD com limpeza automática dos registros criados para demonstração.
+
+Consulte [o roteiro de apresentação](docs/ROTEIRO-APRESENTACAO.md) e a [Collection de demonstração](postman/DEMO%20Professor.postman_collection.json). Os testes GitHub Actions usam PostgreSQL **temporário**; eles não substituem a demonstração da API original conectada ao Supabase real.
+
 ## Tecnologias e arquitetura
 
 - Node.js (20+), TypeScript, Express 5;
@@ -80,7 +94,7 @@ Se o `.env` já existir, o assistente o preservará. Para configuração manual,
 
 ## Demonstração hospedada na nuvem (Supabase Edge Function)
 
-**[Abrir o cardápio funcionando](https://uxrixrkhrvzgitsjfgml.supabase.co/functions/v1/restaurant-catalog)**
+**[Abrir a prévia pública do cardápio](https://raw.githack.com/hhenriquehhenneberg-crypto/restaurant-ordering-system-backend/main/docs/preview.html)**
 
 Esta é uma **demonstração online alternativa**, hospedada como função Deno no Supabase e conectada às mesmas tabelas PostgreSQL. O código exigido na disciplina continua no Express/TypeScript, em `src/`, e a execução local dele permanece separada.
 
